@@ -1,0 +1,16 @@
+django==4.2.0
+djangorestframework==3.14.0
+crewai
+langchain
+google-api-python-client
+youtube-search-python
+python-dotenv
+django-cors-headers
+beautifulsoup4
+markdown
+pdfkit
+requests
+crewai-tools  
+openai
+weasyprint==60.1
+duckduckgo-search
