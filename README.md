@@ -29,8 +29,14 @@ This project leverages **Crew AI** to manage agentic tasks efficiently. It utili
    ```
 3. Run the application:
    ```sh
-   streamlit run app.py
+   cd frontend
+   streamlit run frontend/app.py
    ```
+   ```sh
+   cd backend
+   python manage.py runserver
+    ```
+   
 
 ## Usage
 1. Enter a **Blog Title** (e.g., "The Future of AI in 2025").
