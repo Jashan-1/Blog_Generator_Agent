@@ -15,7 +15,6 @@ import json
 class BlogPostViewSet(viewsets.ModelViewSet):
     queryset = BlogPost.objects.all()
     serializer_class = BlogPostSerializer
-
     @action(detail=False, methods=['post'])
     def generate_blog(self, request):
         title = request.data.get('title')
@@ -28,7 +27,7 @@ class BlogPostViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Initialize CrewAI agent and generate content first
+            # Initialize CrewAI agent and generate content
             agent = BlogCrewAgent()
             generated_content = agent.generate_blog(title, prompts)
 
@@ -38,7 +37,7 @@ class BlogPostViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
-            # Create blog post only after successful content generation
+            # Create blog post
             blog_post = BlogPost.objects.create(
                 title=title,
                 prompts=prompts,
@@ -46,17 +45,19 @@ class BlogPostViewSet(viewsets.ModelViewSet):
                 markdown_content=generated_content
             )
 
-            # Convert to PDF
+            # Convert to PDF and get base64 string
             try:
-                pdf_path, html_content = MarkdownConverter.create_pdf(generated_content)
+                pdf_base64, html_content = MarkdownConverter.create_pdf(generated_content)
                 response_data = BlogPostSerializer(blog_post).data
-                response_data['pdf_path'] = pdf_path
+                response_data['pdf_base64'] = pdf_base64
+                response_data['html_content'] = html_content
                 
                 return Response(
                     response_data,
                     status=status.HTTP_201_CREATED
                 )
             except Exception as pdf_error:
+                print(f"PDF generation error: {str(pdf_error)}")
                 # If PDF conversion fails, still return the blog post without PDF
                 return Response(
                     BlogPostSerializer(blog_post).data,
@@ -64,9 +65,7 @@ class BlogPostViewSet(viewsets.ModelViewSet):
                 )
 
         except Exception as e:
-            # Log the error for debugging
             print(f"Error generating blog: {str(e)}")
-            # Return a proper error response
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -77,11 +76,12 @@ class BlogPostViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         data = serializer.data
 
-        # Generate new PDF if needed
+        # Generate PDF for retrieved post
         if instance.markdown_content:
             try:
-                pdf_path, _ = MarkdownConverter.create_pdf(instance.markdown_content)
-                data['pdf_path'] = pdf_path
+                pdf_base64, html_content = MarkdownConverter.create_pdf(instance.markdown_content)
+                data['pdf_base64'] = pdf_base64
+                data['html_content'] = html_content
             except Exception as e:
                 print(f"Error generating PDF: {str(e)}")
 
@@ -97,12 +97,15 @@ class BlogPostViewSet(viewsets.ModelViewSet):
             blog_post = queryset.get(id=item['id'])
             if blog_post.markdown_content:
                 try:
-                    pdf_path, _ = MarkdownConverter.create_pdf(blog_post.markdown_content)
-                    item['pdf_path'] = pdf_path
+                    pdf_base64, html_content = MarkdownConverter.create_pdf(blog_post.markdown_content)
+                    item['pdf_base64'] = pdf_base64
+                    item['html_content'] = html_content
                 except Exception as e:
                     print(f"Error generating PDF for blog {blog_post.id}: {str(e)}")
 
         return Response(data)
+
+
 
     def perform_destroy(self, instance):
         # Clean up PDF file if it exists

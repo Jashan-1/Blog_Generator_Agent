@@ -14,3 +14,4 @@ crewai-tools
 openai
 weasyprint==60.1
 duckduckgo-search
+graphviz

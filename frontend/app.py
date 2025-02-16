@@ -12,12 +12,11 @@ class BlogGeneratorApp:
         self.API_BASE_URL = "http://localhost:8000/api"
     
     @staticmethod
-    def show_pdf(file_path: str):
-        """Display PDF in Streamlit"""
+    def display_pdf_base64(pdf_base64: str):
+        """Display PDF from base64 string in Streamlit"""
         try:
-            with open(file_path, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
+            # Create PDF display HTML with responsive width
+            pdf_display = f'<iframe src="data:application/pdf;base64,{pdf_base64}" width="100%" height="800" type="application/pdf"></iframe>'
             st.markdown(pdf_display, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error displaying PDF: {str(e)}")
@@ -35,7 +34,6 @@ class BlogGeneratorApp:
             
             submitted = st.form_submit_button("Generate Blog")
         
-        # Handle form submission outside the form
         if submitted:
             if not title or not prompts:
                 st.warning("Please enter both title and prompts")
@@ -49,7 +47,6 @@ class BlogGeneratorApp:
                         timeout=300  # 5-minute timeout
                     )
                     
-                    # Check if the response is valid JSON
                     try:
                         blog_data = response.json()
                     except json.JSONDecodeError:
@@ -71,12 +68,12 @@ class BlogGeneratorApp:
                         
                         with tab2:
                             st.markdown("### PDF Preview")
-                            if 'pdf_path' in blog_data:
-                                self.show_pdf(blog_data['pdf_path'])
+                            if 'pdf_base64' in blog_data and blog_data['pdf_base64']:
+                                self.display_pdf_base64(blog_data['pdf_base64'])
                             else:
                                 st.warning("PDF preview not available")
                         
-                        # Download buttons (outside the form)
+                        # Download buttons
                         st.write("### Download Options")
                         col1, col2 = st.columns(2)
                         
@@ -90,18 +87,17 @@ class BlogGeneratorApp:
                                 ):
                                     st.success("Markdown file downloaded!")
                         
-                        if 'pdf_path' in blog_data:
+                        if 'pdf_base64' in blog_data and blog_data['pdf_base64']:
                             with col2:
                                 try:
-                                    with open(blog_data['pdf_path'], "rb") as pdf_file:
-                                        pdf_bytes = pdf_file.read()
-                                        if st.download_button(
-                                            label="Download PDF",
-                                            data=pdf_bytes,
-                                            file_name=f"{title.lower().replace(' ', '_')}.pdf",
-                                            mime="application/pdf"
-                                        ):
-                                            st.success("PDF file downloaded!")
+                                    pdf_bytes = base64.b64decode(blog_data['pdf_base64'])
+                                    if st.download_button(
+                                        label="Download PDF",
+                                        data=pdf_bytes,
+                                        file_name=f"{title.lower().replace(' ', '_')}.pdf",
+                                        mime="application/pdf"
+                                    ):
+                                        st.success("PDF file downloaded!")
                                 except Exception as e:
                                     st.error(f"Error preparing PDF download: {str(e)}")
                     else:
